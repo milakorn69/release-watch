@@ -1,0 +1,137 @@
+# release-watch configuration. Copy to /etc/release-watch/config.toml and edit.
+
+[settings]
+state_file = "/var/lib/release-watch/state.json"
+# TG_TOKEN, TG_CHAT and optional GITHUB_TOKEN (without it GitHub allows 60 requests/hour per IP,
+# one request per [[watch]] entry). Environment variables override the file.
+env_file = "/etc/release-watch.env"
+timezone = "UTC"              # for upgrade ETAs, e.g. "Europe/Berlin"
+plan_remind_hours = 3         # second alert this long before a scheduled Cosmos upgrade
+announce_every_hours = 23     # how often to check [[forum]] and [[doc]] (the timer runs hourly)
+# Release notes matching this regex are flagged "important" (case-insensitive). Default:
+# important = "mandatory|upgrade height|hard[ -]?fork|network upgrade|must upgrade|required upgrade|(consensus|state)[ -]breaking|breaking change"
+
+# ---------------------------------------------------------------------------------------------
+# Release sources. Keys:
+#   label         name used in messages and to link [[node]] entries
+#   source        "github" (default) or "gitlab"
+#   repo          owner/name (GitLab: full project path)
+#   networks      free text shown in the alert (which of your networks are affected)
+#   tag_filter    only releases whose tag matches (monorepos: one entry per component)
+#   version_tag   only these tags count when picking the latest version for the daily report
+#   version_body  take the version from the release notes (group 1) instead of the tag
+#   branch_regex  repos that patch several release branches at once: only report the newest
+#                 stable branch and newer (group 1 must be a number)
+
+[[watch]]
+label = "Cosmos Hub (gaiad)"
+repo = "cosmos/gaia"
+networks = "cosmoshub-4, provider"
+
+[[watch]]
+label = "op-node"
+repo = "ethereum-optimism/optimism"
+tag_filter = "^op-node/"
+networks = "OP mainnet"
+
+[[watch]]
+label = "Polkadot SDK"
+repo = "paritytech/polkadot-sdk"
+tag_filter = "^polkadot-"
+version_body = 'node version for this release is \*\*v?([\d.]+)'
+branch_regex = 'stable(\d{4})'
+networks = "Asset Hub"
+
+[[watch]]
+label = "Tezos Octez"
+source = "gitlab"
+repo = "tezos/tezos"
+tag_filter = "^octez-v"
+networks = "Tezos mainnet"
+
+[[watch]]
+label = "IOTA"
+repo = "iotaledger/iota"
+networks = "IOTA mainnet, testnet"
+
+# Extra "latest version" entry derived from another source: IOTA tags testnet releases as -rc.
+[[alias]]
+name = "IOTA testnet"
+base = "IOTA"
+tag_filter = "-rc"
+
+# ---------------------------------------------------------------------------------------------
+# Hosts for version probes and upgrade plans. Without `ssh` commands run on the local machine.
+
+[hosts.local]
+
+[hosts.pve1]
+ssh = "root@203.0.113.10"
+ssh_opts = ["-i", "/root/.ssh/release-watch"]
+
+# ---------------------------------------------------------------------------------------------
+# Installed versions for the daily report. Keys:
+#   label    a [[watch]] label (or [[alias]] name) to compare with
+#   network  name shown in the report
+#   host     key in [hosts]
+#   ct       optional Proxmox LXC id: the probe runs via `pct exec <ct>`
+#   probe    shell command whose output contains the version. Helpers:
+#              sb <unit> <args>    run the binary from a systemd unit's ExecStart
+#              cv <unit> [home]    Cosmos node version from /abci_info (port read from config.toml)
+#              w3 <port>           web3_clientVersion of an EVM node
+#              img <container>     docker image of a container (version in the tag)
+#   regex    optional: version is group 1 of this regex
+#   testnet  true: also report a pre-release newer than the installed version
+
+[[node]]
+label = "Cosmos Hub (gaiad)"
+network = "cosmoshub-4"
+host = "pve1"
+ct = 108
+probe = "cv gaiad.service"
+
+[[node]]
+label = "op-node"
+network = "OP mainnet"
+host = "pve1"
+ct = 117
+probe = "img op-node"
+
+[[node]]
+label = "Tezos Octez"
+network = "Tezos mainnet"
+host = "local"
+probe = "sb octez-node.service --version"
+regex = 'Octez ([\d.]+(?:~rc\d+)?)'
+
+[[node]]
+label = "IOTA testnet"
+network = "IOTA testnet"
+host = "pve1"
+ct = 102
+probe = "docker exec iota-fullnode-1 iota-node --version"
+testnet = true
+
+# ---------------------------------------------------------------------------------------------
+# Cosmos SDK chains whose on-chain upgrade plan (x/upgrade) is watched.
+#   service  systemd unit of the node; RPC port is read from config.toml in DAEMON_HOME
+#   home     node home if the unit has no DAEMON_HOME (i.e. not run by cosmovisor)
+
+[[plan]]
+network = "cosmoshub-4"
+host = "pve1"
+ct = 108
+service = "gaiad.service"
+
+# ---------------------------------------------------------------------------------------------
+# Announcements outside GitHub: new posts in a Discourse forum search, changed doc pages.
+
+[[forum]]
+label = "Monad validator program"
+url = "https://forum.monad.xyz"
+query = '"delegation program"'
+
+[[doc]]
+label = "Monad validator program"
+url = "https://docs.monad.xyz/node-ops/validator-delegation-program.md"   # fetched and diffed
+page = "https://docs.monad.xyz/node-ops/validator-delegation-program"      # link in the alert
