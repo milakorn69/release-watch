@@ -1,0 +1,10 @@
+[Unit]
+Description=Hourly check for new node software releases
+
+[Timer]
+OnCalendar=hourly
+RandomizedDelaySec=5min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

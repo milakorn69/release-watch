@@ -1,0 +1,8 @@
+[Unit]
+Description=Daily release-watch report
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /opt/release-watch/release_watch.py -c /etc/release-watch/config.toml --daily

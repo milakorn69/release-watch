@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily release-watch report
+
+[Timer]
+# Change the time and zone to suit you, e.g. 09:00 Europe/Berlin
+OnCalendar=*-*-* 09:00:00 UTC
+Persistent=true
+
+[Install]
+WantedBy=timers.target
