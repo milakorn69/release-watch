@@ -119,7 +119,8 @@ class Watch:
             elif cur is not None and "setlocale" not in line:
                 out[cur].append(line)
         if not out and p.returncode:
-            raise RuntimeError(p.stderr.strip()[:200])
+            # the last stderr line is the reason; earlier ones are ssh warnings
+            raise RuntimeError((p.stderr.strip().splitlines() or [f"exit code {p.returncode}"])[-1][:200])
         return {k: "\n".join(v).strip() for k, v in out.items()}
 
     # ---- releases ----
