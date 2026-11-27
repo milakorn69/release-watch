@@ -1,5 +1,8 @@
 # release-watch
 
+[![ci](https://github.com/milakorn69/release-watch/actions/workflows/ci.yml/badge.svg)](https://github.com/milakorn69/release-watch/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 Telegram alerts for node operators: new releases of the software you run, scheduled
 Cosmos SDK upgrades, and a daily report of which of your nodes are behind.
 
